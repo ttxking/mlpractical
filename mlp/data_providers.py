@@ -133,10 +133,10 @@ class MNISTDataProvider(DataProvider):
         super(MNISTDataProvider, self).__init__(
             inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
 
-    # def next(self):
-    #    """Returns next data batch or raises `StopIteration` if at end."""
-    #    inputs_batch, targets_batch = super(MNISTDataProvider, self).next()
-    #    return inputs_batch, self.to_one_of_k(targets_batch)
+    def next(self):
+       """Returns next data batch or raises `StopIteration` if at end."""
+       inputs_batch, targets_batch = super(MNISTDataProvider, self).next()
+       return inputs_batch, self.to_one_of_k(targets_batch)
     
     def __next__(self):
         return self.next()
@@ -156,8 +156,14 @@ class MNISTDataProvider(DataProvider):
             to zero except for the column corresponding to the correct class
             which is equal to one.
         """
-        raise NotImplementedError()
-
+        num_data = len(int_targets)
+        to_one_k = np.zeros((num_data, 10))
+        i = 0
+        for c in int_targets:
+            to_one_k[i,c] = 1
+            i += 1
+        return to_one_k
+        
 
 class MetOfficeDataProvider(DataProvider):
     """South Scotland Met Office weather data provider."""
@@ -187,22 +193,31 @@ class MetOfficeDataProvider(DataProvider):
         assert os.path.isfile(data_path), (
             'Data file does not exist at expected path: ' + data_path
         )
-        #TODO: load raw data from text file
-        
-        #TODO: filter out all missing datapoints and flatten to a vector
-        
-        #TODO: normalise data to zero mean, unit standard deviation
+        data = np.loadtxt(data_path, skiprows=3)
+        self.data = data[:, 2:]
+            
+        self.filtered_data = self.data[self.data != -99.99].flatten()
 
-        #TODO: convert from flat sequence to windowed data
+        mean = np.mean(self.filtered_data)
+        std_dev = np.std(self.filtered_data)
+        self.normalized_data_z = (self.filtered_data - mean) / std_dev
 
-        #TODO: separate into inputs and targets
+        data_shape = self.normalized_data_z.shape[0]
+        no_of_omit = data_shape % window_size
+        if no_of_omit != 0:
+            self.normalized_data_z = self.normalized_data_z[:-no_of_omit]
+            self.windowed_data = np.reshape(self.normalized_data_z, (-1, window_size)) 
+        else:
+            self.windowed_data = np.reshape(self.normalized_data_z, (-1, window_size))
+        
         # inputs are the first (window_size - 1) entries in windows
-        # inputs = ...
+        inputs = self.windowed_data[:, :window_size-1]
         # targets are the last entries in windows
-        # targets = ...
+        targets = self.windowed_data[:, -1]
         
         # initialise base class with inputs and targets arrays (uncomment below)
-        # super(MetOfficeDataProvider, self).__init__(
-        #     inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
+        super(MetOfficeDataProvider, self).__init__(
+            inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
+
     def __next__(self):
             return self.next()
