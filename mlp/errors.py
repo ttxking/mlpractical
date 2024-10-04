@@ -13,7 +13,7 @@ import numpy as np
 
 
 class SumOfSquaredDiffsError(object):
-    """Sum of squared differences (squared Euclidean distance) error."""
+    """Sum of squared differences (squared Euclidean distance) error."""    
 
     def __call__(self, outputs, targets):
         """Calculates error function given a batch of outputs and targets.
@@ -25,8 +25,10 @@ class SumOfSquaredDiffsError(object):
         Returns:
             Scalar error function value.
         """
-        #TODO write your code here
-        raise NotImplementedError()
+        square_diff = pow(outputs-targets, 2)
+        e = sum(sum(square_diff/2))
+        N = square_diff.shape[0]
+        return e/N
 
     def grad(self, outputs, targets):
         """Calculates gradient of error function with respect to outputs.
@@ -39,8 +41,9 @@ class SumOfSquaredDiffsError(object):
             Gradient of error function with respect to outputs. This should be
             an array of shape (batch_size, output_dim).
         """
-        #TODO write your code here
-        raise NotImplementedError()
+        diff = outputs-targets
+        N = diff.shape[0]
+        return diff/N
 
     def __repr__(self):
         return 'SumOfSquaredDiffsError'
